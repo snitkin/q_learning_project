@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 
+from tkinter import N
 import rospy
 import numpy as np
 import os
 import random
+
+from q_learning_project.msg import QMatrix
+from q_learning_project.msg import QLearningReward
+from q_learning_project.msg import RobotMoveObjectToTag
 
 # Path of directory on where this file is located
 path_prefix = os.path.dirname(__file__) + "/action_states/"
@@ -45,7 +50,28 @@ class QLearning(object):
         self.states = np.loadtxt(path_prefix + "states.txt")
         self.states = list(map(lambda x: list(map(lambda y: int(y), x)), self.states))
 
+        # Subscribers and publishers for rewards, matrix, and actions
+        rospy.Subscriber("/q_learning/reward", QLearningReward, self.get_reward)
+        self.action_publisher = rospy.Publisher('/q_learning/robot_action', RobotMoveObjectToTag, queue_size=10)
+        self.q_matrix_publisher = rospy.Publisher('/q_learning/q_matrix', QMatrix, queue_size=10)
 
+        self.reward = None
+
+    def publish_action(self, action_num):
+
+
+        obj = self.actions[action_num]['object']
+        tag = self.actions[action_num]['tag']
+
+        action = RobotMoveObjectToTag(robot_object = obj, tag_id = tag)
+
+        self.action_publisher.publish(action)
+
+    def get_reward(self, data):
+        self.reward = data.reward
+        # itr_num = data.iteration_num
+        self.waiting_for_reward = False
+        return 
     
     def q_learning_algorithm(self, data):
         discount = 0.8
@@ -60,7 +86,7 @@ class QLearning(object):
         Q = [[0 for i in range(9)] for j in range(64)]
 
         
-        while(no_change < converging):
+        while(no_change < converge):
             
             #possible actions
             candidates = []
@@ -74,26 +100,27 @@ class QLearning(object):
             #state after action, choose one randomly
             new_state = random.choice(candidates)
             #take action
-            action = self.action_matrix[state][new_state]
+            action_num = self.action_matrix[state][new_state]
             
+            self.waiting_for_reward = True
             ##TODO publish action here
-            ##TODO get reward
-            #reward function, check how to do this
-            reward = 0
+            self.publish_action(action_num)
 
+            while (self.wating_for_reward):
+                i = 1
 
-            q = Q[state, action]
+            q = Q[state, action_num]
             #max Q(st+1, at)
             max_q = max(Q[new_state])
 
             #update q value step
-            new_q = q + alpha * (reward + discount * max_q - q)
+            new_q = q + alpha * (self.reward + discount * max_q - q)
             t = t + 1
             
             #check if things changed
             if(new_q != q):
                 no_change += 1
-                Q[state, action] = new_q
+                Q[state, action_num] = new_q
             else:
                 no_change = 0
 
