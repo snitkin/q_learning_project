@@ -3,6 +3,7 @@
 import rospy
 import numpy as np
 import os
+import random
 
 # Path of directory on where this file is located
 path_prefix = os.path.dirname(__file__) + "/action_states/"
@@ -44,6 +45,63 @@ class QLearning(object):
         self.states = np.loadtxt(path_prefix + "states.txt")
         self.states = list(map(lambda x: list(map(lambda y: int(y), x)), self.states))
 
+
+    
+    def q_learning_algorithm(self, data):
+        discount = 0.8
+        alpha = 1
+        #how many times we want no change before converging
+        converge = 64 * 2
+        state = 0
+        t = 0
+        no_change = 0
+
+        #intialize matrix of 0s
+        Q = [[0 for i in range(9)] for j in range(64)]
+
+        
+        while(no_change < converging):
+            
+            #possible actions
+            candidates = []
+
+            #loop through action matrix 
+            for i in range(len(self.action_matrix)):
+                pos_action = self.action_matrix[state][i]
+                #select valid actions
+                if pos_action >= 0:
+                    candidates.append(i)
+            #state after action, choose one randomly
+            new_state = random.choice(candidates)
+            #take action
+            action = self.action_matrix[state][new_state]
+            
+            ##TODO publish action here
+            ##TODO get reward
+            #reward function, check how to do this
+            reward = 0
+
+
+            q = Q[state, action]
+            #max Q(st+1, at)
+            max_q = max(Q[new_state])
+
+            #update q value step
+            new_q = q + alpha * (reward + discount * max_q - q)
+            t = t + 1
+            
+            #check if things changed
+            if(new_q != q):
+                no_change += 1
+                Q[state, action] = new_q
+            else:
+                no_change = 0
+
+
+
+
+
+    
     def save_q_matrix(self):
         # TODO: You'll want to save your q_matrix to a file once it is done to
         # avoid retraining
