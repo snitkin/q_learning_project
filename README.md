@@ -52,7 +52,13 @@ We can test this in the lab, and more modularly, try just picking up and putting
 ### Timeline
 
 April 27 - Implementation Plan Due
-May 3 - Q matrix intermediate deliverable complete
-May 10 - Project complete
+
+April 28 - Work on robot in lab, complete algorithm implementation
+
+May 3 - Q matrix intermediate deliverable complete, be able to converge, print, and save matrix
+
+May 7 - Have Robot preceptions steps complete
+
+May 10 - Project complete, meaning robot movement and manipulation are finalized and all project elemtents are integrated.
 
 ## Writeup
