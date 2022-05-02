@@ -62,3 +62,25 @@ May 7 - Have Robot preceptions steps complete
 May 10 - Project complete, meaning robot movement and manipulation are finalized and all project elemtents are integrated.
 
 ## Writeup
+
+### Objective Description
+
+The goal of this project is to properly implement the Q-learning algoirthm to understand reward based learning.
+
+### High-level description
+
+From the action matrix, we generate a list of viable candidate actions. We then choose an action randomly from this list and get the expected reward from the node. We then update the corresponding value of our Q-matrix based on this reward and the other parameters. When the Q-matrix has gone through 32n iterations (where n is the number of possible actions) with no change, we say it has converged and save the q matrix. 
+
+### Q-learning algorithm
+
+#### Selecting Actions
+
+This code is located in a for loop in q_learning_algorithm(). Taking the current state, we loop through the possible actions and save the candidates if the action if greater than or equal to 0 in the action matrix. If there are no possible actions, we set the state back to 0. If there is a possible action, we select a new state randomly from the list of candidates.
+
+#### Updating Q-matrix
+
+This code is in a while loop in q_learning_algorithm(). We publish the action and wait for the reward to be plublished. Given the reward, we calculate a new q value using the Q-learning rule based on our discount and learning rate parameters and the previous q value. We take the calculated q value and updated our matrix accordingly.
+
+#### Determining Convergence
+
+For each new q, we check if the q-value changed. If there was no change, we iterate our ticker. If there is a change, we reset the value to of our ticker to 0. When our ticker has gotten sufficiently high (currently 2048) we say the matrix has converged and save it.
