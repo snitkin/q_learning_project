@@ -5,6 +5,7 @@ import rospy
 import numpy as np
 import os
 import random
+import pandas as pd
 
 from q_learning_project.msg import QMatrix
 from q_learning_project.msg import QLearningReward
@@ -57,6 +58,11 @@ class QLearning(object):
 
         self.reward = None
 
+        #intialize matrix of 0s
+        self.Q = [[0 for i in range(9)] for j in range(64)]
+
+        rospy.sleep(5)
+
     def publish_action(self, action_num):
 
 
@@ -82,8 +88,6 @@ class QLearning(object):
         t = 0
         no_change = 0
 
-        #intialize matrix of 0s
-        Q = [[0 for i in range(9)] for j in range(64)]
 
         
         while(no_change < converge):
@@ -130,9 +134,9 @@ class QLearning(object):
                     no_change = 0
         
     def save_q_matrix(self):
-        # TODO: You'll want to save your q_matrix to a file once it is done to
-        # avoid retraining
-        return
+        df = pd.DataFrame(self.Q)
+        df.to_csv("~/catkin_ws/src/q_learning_project/q_matrix.csv")
+        return True
 
 if __name__ == "__main__":
     node = QLearning()
