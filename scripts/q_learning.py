@@ -100,37 +100,37 @@ class QLearning(object):
                 if pos_action >= 0:
                     candidates.append(i)
             #state after action, choose one randomly
-            new_state = random.choice(candidates)
-            #take action
-            action_num = self.action_matrix[state][new_state]
             
-            self.waiting_for_reward = True
-            ##TODO publish action here
-            self.publish_action(action_num)
+            #if there are no possible actions, end state, go back to origin and contiue algorithm
+            if len(candidates) == 0:
+                state = 0
+            else: 
+                new_state = random.choice(candidates)
+                #take action
+                action_num = self.action_matrix[state][new_state]
+                
+                self.waiting_for_reward = True
+                #publish action and wait for reward subscriber to update
+                self.publish_action(action_num)
 
-            while (self.wating_for_reward):
-                i = 1
+                while (self.wating_for_reward):
+                    i = 1
 
-            q = self.Q[state, action_num]
-            #max Q(st+1, at)
-            max_q = max(self.Q[new_state])
+                q = Q[state, action_num]
+                #max Q(st+1, at)
+                max_q = max(Q[new_state])
 
-            #update q value step
-            new_q = q + alpha * (self.reward + discount * max_q - q)
-            t = t + 1
-            
-            #check if things changed
-            if(new_q != q):
-                no_change += 1
-                self.Q[state, action_num] = new_q
-            else:
-                no_change = 0
-
-
-
-
-
-    
+                #update q value step
+                new_q = q + alpha * (self.reward + discount * max_q - q)
+                t = t + 1
+                
+                #check if things changed
+                if(new_q != q):
+                    no_change += 1
+                    Q[state, action_num] = new_q
+                else:
+                    no_change = 0
+        
     def save_q_matrix(self):
         # TODO: You'll want to save your q_matrix to a file once it is done to
         # avoid retraining
