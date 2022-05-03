@@ -66,6 +66,7 @@ class QLearning(object):
         self.r = rospy.Rate(0.5)
         rospy.sleep(3)
         self.q_learning_algorithm()
+        self.save_q_matrix()
         print("learned")
 
     def publish_action(self, action_num):
@@ -87,7 +88,7 @@ class QLearning(object):
         discount = 0.8
         alpha = 1
         #how many times we want no change before converging
-        converge = 64 * 32
+        converge = 64 * 16
         state = 0
         t = 0
         no_change = 0
@@ -103,11 +104,12 @@ class QLearning(object):
                 #select valid actions
                 if pos_action >= 0:
                     candidates.append(i)
+
             #state after action, choose one randomly
-            
             #if there are no possible actions, end state, go back to origin and contiue algorithm
             if len(candidates) == 0:
                 state = 0
+                print("reset")
             else: 
                 new_state = random.choice(candidates)
                 #take action
@@ -122,19 +124,23 @@ class QLearning(object):
 
                 q = self.Q[state][action_num]
                 #max Q(st+1, at)
+                # print(self.Q[new_state])
                 max_q = max(self.Q[new_state])
-
+                
+                # print(max_q)
                 #update q value step
                 new_q = q + alpha * (self.reward + discount * max_q - q)
                 t = t + 1
                 
                 #check if things changed
-                if(new_q != q):
+                if(new_q > q):
                     no_change = 0 
                     self.Q[state][action_num] = new_q
+                    # print(self.Q)
                 else:
                     no_change += 1
-        
+                state = new_state
+
         
         
     def save_q_matrix(self):
