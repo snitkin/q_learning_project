@@ -18,6 +18,7 @@ class QLearning(object):
     def __init__(self):
         # Initialize this node
         rospy.init_node("q_learning")
+        print("Initializing\n")
 
         # Fetch pre-built action matrix. This is a 2d numpy array where row indexes
         # correspond to the starting state and column indexes are the next states.
@@ -57,15 +58,17 @@ class QLearning(object):
         self.q_matrix_publisher = rospy.Publisher('/q_learning/q_matrix', QMatrix, queue_size=10)
 
         self.reward = None
+        self.waiting_for_reward = False
 
         #intialize matrix of 0s
         self.Q = [[0 for i in range(9)] for j in range(64)]
-
-        rospy.sleep(5)
+        print("initialized")
+        self.r = rospy.Rate(0.5)
+        rospy.sleep(3)
+        self.q_learning_algorithm()
+        print("learned")
 
     def publish_action(self, action_num):
-
-
         obj = self.actions[action_num]['object']
         tag = self.actions[action_num]['tag']
 
@@ -79,19 +82,18 @@ class QLearning(object):
         self.waiting_for_reward = False
         return 
     
-    def q_learning_algorithm(self, data):
+    def q_learning_algorithm(self):
+        print("Starting to learn")
         discount = 0.8
         alpha = 1
         #how many times we want no change before converging
-        converge = 64 * 2
+        converge = 64 * 32
         state = 0
         t = 0
         no_change = 0
-
-
         
         while(no_change < converge):
-            
+            print(no_change, converge)
             #possible actions
             candidates = []
 
@@ -109,18 +111,18 @@ class QLearning(object):
             else: 
                 new_state = random.choice(candidates)
                 #take action
-                action_num = self.action_matrix[state][new_state]
+                action_num = int(self.action_matrix[state][new_state])
                 
                 self.waiting_for_reward = True
                 #publish action and wait for reward subscriber to update
                 self.publish_action(action_num)
-
-                while (self.wating_for_reward):
+             
+                while (self.waiting_for_reward):
                     i = 1
 
-                q = Q[state, action_num]
+                q = self.Q[state][action_num]
                 #max Q(st+1, at)
-                max_q = max(Q[new_state])
+                max_q = max(self.Q[new_state])
 
                 #update q value step
                 new_q = q + alpha * (self.reward + discount * max_q - q)
@@ -128,10 +130,12 @@ class QLearning(object):
                 
                 #check if things changed
                 if(new_q != q):
-                    no_change += 1
-                    Q[state, action_num] = new_q
+                    no_change = 0 
+                    self.Q[state][action_num] = new_q
                 else:
-                    no_change = 0
+                    no_change += 1
+        
+        
         
     def save_q_matrix(self):
         df = pd.DataFrame(self.Q)
