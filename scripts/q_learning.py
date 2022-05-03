@@ -57,6 +57,10 @@ class QLearning(object):
 
         self.reward = None
 
+        #intialize matrix of 0s
+        self.Q = [[0 for i in range(9)] for j in range(64)]
+
+
     def publish_action(self, action_num):
 
 
@@ -82,8 +86,6 @@ class QLearning(object):
         t = 0
         no_change = 0
 
-        #intialize matrix of 0s
-        Q = [[0 for i in range(9)] for j in range(64)]
 
         
         while(no_change < converge):
@@ -109,9 +111,9 @@ class QLearning(object):
             while (self.wating_for_reward):
                 i = 1
 
-            q = Q[state, action_num]
+            q = self.Q[state, action_num]
             #max Q(st+1, at)
-            max_q = max(Q[new_state])
+            max_q = max(self.Q[new_state])
 
             #update q value step
             new_q = q + alpha * (self.reward + discount * max_q - q)
@@ -120,7 +122,7 @@ class QLearning(object):
             #check if things changed
             if(new_q != q):
                 no_change += 1
-                Q[state, action_num] = new_q
+                self.Q[state, action_num] = new_q
             else:
                 no_change = 0
 
@@ -132,7 +134,8 @@ class QLearning(object):
     def save_q_matrix(self):
         # TODO: You'll want to save your q_matrix to a file once it is done to
         # avoid retraining
-        return
+        np.savetxt(fname = "q_matrix.txt", X = self.Q)
+        return True
 
 if __name__ == "__main__":
     node = QLearning()
