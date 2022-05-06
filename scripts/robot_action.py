@@ -77,6 +77,8 @@ class Action:
         self.states = np.loadtxt(path_prefix + "states.txt")
         self.states = list(map(lambda x: list(map(lambda y: int(y), x)), self.states))
         
+        self.aruco_dict = cv2.aruco.Dictionary_get(cv2.aruco.DICT_4X4_50)
+
         #read in q_matrix
         self.q_matrix = pd.read_csv("~/catkin_ws/src/q_learning_project/q_matrix.csv").iloc[:,1:].to_numpy()
         #policy of best actions intialized, tested
@@ -141,9 +143,9 @@ class Action:
         self.scan = scan
 
     def find_and_face_color(self):  
-        print("finding color")  
+        #print("finding color")  
         hsv = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-        print("There's an image")
+        #print("There's an image")
         
         #define hsv values of different colors
         bounds = {"pink": {"lower": numpy.array([155,50, 155]),
@@ -186,20 +188,21 @@ class Action:
             #       the yellow line
 
         #how left is the dot from the center of the image 
-        rotFactor = 0.005
+        rotFactor = -0.005
         if(not np.isnan(cx)):
             offCenter = cx - w/2
-            if offCenter == 0:
+            #if facing robot with margin of error
+            if offCenter in range(-1, 0):
                 self.inFront = True
             myAngular = Vector3(0,0, rotFactor * offCenter)
         else:
-            myAngular = Vector3(0,0, 0.05)
+            myAngular = Vector3(0,0, 0.1)
             offCenter = 0
-            print("nothing found")
+            #print("nothing found")
         
         #speed at which to turn
-        print("now moving")
-        print(offCenter)
+        #print("now moving")
+        #print(offCenter)
         
         
         my_twist = Twist(
@@ -220,6 +223,57 @@ class Action:
         #cv2.waitKey(3)
 
 
+    def find_and_face_ar(self):
+        h, w, d = self.image.shape
+        #turn the image into a grayscale
+        gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
+        corners, ids, rejected_points = cv2.aruco.detectMarkers(gray,
+        self.aruco_dict)
+        tag_index = np.where(ids == self.ar)[-1]
+        tag_center = np.NAN
+        #if found the tag
+        if(tag_index.size > 0):
+            tag_index = tag_index[0]
+            #this gives me four by 2 array of coordinates
+            these_corners = corners[tag_index][0]
+            #return the x values of the tag
+            tag_xs = these_corners[:,0]
+            tag_center = np.average(tag_xs)
+        #how left is the dot from the center of the image 
+        rotFactor = -0.005
+        if(not np.isnan(tag_center)):
+            offCenter = tag_center - w/2
+            #if facing robot with margin of error
+            if offCenter in range(-1, 1):
+                self.inFront = True
+            myAngular = Vector3(0,0, rotFactor * offCenter)
+            myLinear = Vector3(0, 0, 0)
+        else:
+            myAngular = Vector3(0,0, 0.1)
+            myLinear = Vector3(0,0,0)
+            offCenter = 0
+            #print("nothing found")
+        
+        #speed at which to turn
+        #print("now moving")
+        #print(offCenter)
+        
+        
+        my_twist = Twist(
+            #move forward at constant speed
+            linear = myLinear,
+            angular = myAngular
+        )
+        # allow the publisher enough time to set up before publishing the first msg
+        #rospy.sleep(0.1)
+        #print("slept")
+
+        # publish the message
+        self.robot_movement_pub.publish(my_twist)
+
+
+
+
     def do_actions(self):
         #loop through the policy
         for action_num in self.policy:
@@ -227,14 +281,22 @@ class Action:
             #publish the action
             self.publish_action(action_num)
             self.color = self.actions[action_num]['object']
+            self.ar = self.actions[action_num]['tag']
             print("looking for")
             print(self.color)
             self.inFront = False
             while(not self.inFront):
-                #rospy.sleep(0.1)
-                print(self.inFront)
-                print('new')
                 self.find_and_face_color()
+            print("ready for next step")
+            rospy.sleep(1)
+            #TODO: go to and pickup dumbell
+            print(self.ar)
+            self.inFront = False
+            while(not self.inFront):
+                self.find_and_face_ar()
+            print("ready for next step")
+            rospy.sleep(1)
+            #TODO: go to tag and put down dumbell
             
 
 
