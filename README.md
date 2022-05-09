@@ -3,6 +3,27 @@
 
 Sam Nitkin and Matthias Ling
 
+# Commands
+roscore
+
+ssh pi@[robot]
+set_ip 
+bringup
+
+ssh 
+set_ip
+bringup_cam
+
+rosrun image_transport republish compressed in:=raspicam_node/image raw out:=camera/rgb/image_raw
+
+roslaunch turtlebot3_manipulation_bringup turtlebot3_manipulation_bringup.launch
+
+roslaunch turtlebot3_manipulation_moveit_config move_group.launch
+
+rosrun q_learning_project robot_action.py 
+
+
+
 ## Implementation Plan
 
 ### Q-learning algorithm
