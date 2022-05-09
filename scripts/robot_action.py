@@ -22,6 +22,8 @@ kp = 0.05
 class Action:
 
     def __init__(self):
+
+        self.time_to_drop = False
         
         #intialize this node
         rospy.init_node("robot_action")
@@ -104,9 +106,8 @@ class Action:
         self.move_group_arm.go([0,0,0,0], wait=True)
         print("ready")
 
-        self.image_init = True
-
         self.min_distance = 0.22
+        self.min_drop_distance = 0.4
 
         while not self.image_init:
             print("waiting for init")
@@ -167,7 +168,7 @@ class Action:
                 "green": {"lower": numpy.array([35,50, 155]),
                             "upper" : numpy.array([50, 255, 255])},
                 "blue": {"lower": numpy.array([85,50, 155]),
-                            "upper" : numpy.array([100, 255, 255])},                   
+                            "upper" : numpy.array([105, 255, 255])},                   
                 }
         
 
@@ -206,7 +207,7 @@ class Action:
         if(not np.isnan(cx)):
             offCenter = cx - w/2
             #if facing robot with margin of error
-            if offCenter in range(-1, 0):
+            if offCenter in range(-2, 2):
                 self.inFront = True
             myAngular = Vector3(0,0, rotFactor * offCenter)
         else:
@@ -258,13 +259,13 @@ class Action:
         if(not np.isnan(tag_center)):
             offCenter = tag_center - w/2
             #if facing robot with margin of error
-            if offCenter in range(-1, 1):
-                self.inFront = True
+            if offCenter in range(-2, 2):
+                self.inFrontAR = True
             myAngular = Vector3(0,0, rotFactor * offCenter)
-            myLinear = Vector3(0, 0, 0)
+            #myLinear = Vector3(0, 0, 0)
         else:
             myAngular = Vector3(0,0, 0.1)
-            myLinear = Vector3(0,0,0)
+            #myLinear = Vector3(0,0,0)
             offCenter = 0
             #print("nothing found")
         
@@ -272,12 +273,11 @@ class Action:
         #print("now moving")
         #print(offCenter)
         
-        
-        twist = Twist()
-        #move forward at constant speed
-        twist.linear.x = 0.2,
-        twist.angular.z = myAngular
-        
+        my_twist = Twist(
+            #move forward at constant speed
+            linear = Vector3(0, 0, 0),
+            angular = myAngular
+        )
         # allow the publisher enough time to set up before publishing the first msg
         #rospy.sleep(0.1)
         #print("slept")
@@ -287,7 +287,7 @@ class Action:
 
 
     # Uses proportional control to drive to the target based on self.scan 
-    def drive_to_target(self):
+    def drive_to_target(self, code):
         
         self.set_movement_arm()
         m = 100
@@ -296,24 +296,33 @@ class Action:
             linear = Vector3(),
             angular = Vector3()
         )
+
+        min_dist = 0.5
+
+        if code == "tube":
+            print("driving to tube")
+            min_dist = self.min_distance
+            bound1, bound2 = -10, 11
+        elif code == "ar":
+            min_dist = self.min_drop_distance
+            bound1, bound2 = -2, 3
+        else:
+            print("drive_to_target_error")
+            return
         
         cnt = 0
         print("ready to move")
-        while m > self.min_distance:
+        while m > min_dist:
             cnt += 1
 
             scan = list(self.scan)
-            arr = scan[-10:] + scan[:11]
+            arr = scan[bound1:] + scan[:bound2]
             m = min(arr)
 
             index = arr.index(m)
 
-            #-11 instead of -10 to compensate for listing to the right
-            index -= 9
-
-            if index and not cnt % 20:
-
-                print(m,index)
+            #-9 instead of -10 to compensate for listing to the right
+            index -= -(bound1 + 1)
 
             angular = (kp * index / 2)
 
@@ -336,7 +345,6 @@ class Action:
         goal = map(math.radians, goal)
         self.move_group_arm.go(goal, wait=True)
         self.move_group_arm.stop()
-
         rospy.sleep(2)
 
     def set_gripper(self, goal):
@@ -363,7 +371,7 @@ class Action:
 
         goal = [0,5,0,0]
         self.set_arm(goal)
-        print("arm in position")
+        print("gripper in position")
         rospy.sleep(2)
 
 
@@ -374,28 +382,52 @@ class Action:
 
         gripper_joint_goal = [-0.007, -0.007]
         self.set_gripper(gripper_joint_goal)
-        goal = [0,-50,0,0]
+        goal = [0,-70,0,0]
         self.set_arm(goal)
         rospy.sleep(2)
         print("lifted")
         return True
+
+    def drop_arm(self):
+
+        goal = [0,0,0,0]
+        self.set_arm(goal)
+        rospy.sleep(5)
+        self.time_to_drop = True
     
     def and_put_them_down(self):
         print("putting")
-        goal = [0,0,0,0]
-        self.set_arm(goal)
+        self.drop_arm()
+
+        while not self.time_to_drop:
+            i = 1
         print("arm put")
-        gripper_joint_goal = [0.01, 0.01]
-        self.set_gripper(gripper_joint_goal)
-        print("put")
+        # gripper_joint_goal = [0.01, 0.01]
+        # self.set_gripper(gripper_joint_goal)
+        # print("put")
+        self.time_to_drop = False
+        print("done")
         return True
 
-    def do_actions(self):
+    def throw_it_back(self):
+        twist = Twist(
+            linear = Vector3(),
+            angular = Vector3()
+        )
 
-        # self.drive_to_target()
-        # self.i_lift_things_up()
-        # self.and_put_them_down()
-        # return
+        twist.linear.x = -0.1
+        self.robot_movement_pub.publish(twist)
+        rospy.sleep(1.5)
+        twist.linear.x = 0
+        self.robot_movement_pub.publish(twist)
+        rospy.sleep(1)
+
+    def do_actions(self):
+        self.throw_it_back()
+        self.drive_to_target("tube")
+        self.i_lift_things_up()
+        self.and_put_them_down()
+        return
 
         #loop through the policy
         for action_num in self.policy:
@@ -413,22 +445,23 @@ class Action:
             rospy.sleep(1)
 
             #Goes to and picks up dumbbell
-            self.drive_to_target()
+            self.drive_to_target("tube")
             self.i_lift_things_up()
 
+
+            rospy.sleep(1)
             print(self.ar)
-            self.inFront = False
-            while(not self.inFront):
+            self.inFrontAR = False
+            while(not self.inFrontAR):
                 self.find_and_face_ar()
             print("ready for next step")
-            rospy.sleep(1)
+            rospy.sleep(2)
 
             # Goes to AR and drops dumbbell
-            self.drive_to_target()
+            self.drive_to_target("ar")
+            rospy.sleep(2)
             self.and_put_them_down()
-
-            
-
+            self.throw_it_back()
 
     def run(self):
             rospy.spin()
