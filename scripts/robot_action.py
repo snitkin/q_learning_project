@@ -402,9 +402,9 @@ class Action:
         while not self.time_to_drop:
             i = 1
         print("arm put")
-        # gripper_joint_goal = [0.01, 0.01]
-        # self.set_gripper(gripper_joint_goal)
-        # print("put")
+        gripper_joint_goal = [0.01, 0.01]
+        self.set_gripper(gripper_joint_goal)
+        print("put")
         self.time_to_drop = False
         print("done")
         return True
