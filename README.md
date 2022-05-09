@@ -84,3 +84,27 @@ This code is in a while loop in q_learning_algorithm(). We publish the action an
 #### Determining Convergence
 
 For each new q, we check if the q-value changed. If there was no change, we iterate our ticker. If there is a change, we reset the value to of our ticker to 0. When our ticker has gotten sufficiently high (currently 2048) we say the matrix has converged and save it.
+
+#### Executing Path
+
+The path is determined in get_policy() after the csv is read in. Starting in state 0, the highest value is determined for the row corresponding to the state in the q matrix. The column of that value is the corresponding action. If the value is 0, it means that there are no new optimal policies and the loop ends. If instead the value is greater than 0, the action is appended to the policy and the new state is determined based on the action. When the policy is complete, the actions in the policy are looped through in do_actions()
+
+### Robot Perception
+ 
+ The robot precieves using the LaserScan and Image sensors. In a callback function for each sensor, we intialized the laser ranges and image and made sure not to run the rest of our code until these were intialized. find_and_face_color() and find_and_face_ar() are structured very similarly. First, they process the image and search for any pixels of the color for color or the corners of the appropriate ar tag for ar and average the Xs values. This code is based on lab 2, line follower. For the colors, HSV values were selected and tested using broad ranges. For the AR tags, is is based on the dictionary provided to us in the lab instructions. If the robot cannot see what it is looking for, it spins until it does.
+ 
+ ### Robot Movement
+  
+  Once the color tube or tag's center of Xs has been identified, the robot uses proportional control to face the object based on the difference between the center of the object and the center of the image on the X-axis.
+  
+  
+  ### Challenegs
+  
+  One challenge with this project was testing was quite difficult. Whether in Gazebo or with the physical turtlebot, it took a while to set up a single run, and sometimes the robot would stop working unexpectly and everything would have to be restarted. This limitation severly slow downed the debugging process and makes selecting and adjusting parameters such as movement speed more difficult.
+  
+ 
+ ### Future Work
+ 
+ ### Takeaways
+  
+  -This project involved working on two distinct steps. One thing that was helpful for this was organizing our code into seperate files and using messages, nodes, and launch files to properly access the different actions we wanted to do. This high level organization, along with intermediate deliverables, made this large task much more manageable. 
