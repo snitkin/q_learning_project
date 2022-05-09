@@ -7,10 +7,17 @@ import os
 import pandas as pd
 import numpy as np
 
+import moveit_commander
+
+import math
+from math import radians
+
 from q_learning_project.msg import RobotMoveObjectToTag
 
 # Path of directory on where this file is located
 path_prefix = os.path.dirname(__file__) + "/action_states/"
+
+kp = 0.05
 
 class Action:
 
@@ -84,15 +91,28 @@ class Action:
         #policy of best actions intialized, tested
         self.get_policy()
 
+
+        # the interface to the group of joints making up the turtlebot3
+        # openmanipulator arm
+        self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
+
+        # the interface to the group of joints making up the turtlebot3
+        # openmanipulator gripper
+        self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
+
+        # Reset arm position
+        self.move_group_arm.go([0,0,0,0], wait=True)
+        print("ready")
+
+        self.image_init = True
+
+        self.min_distance = 0.22
+
         while not self.image_init:
             print("waiting for init")
         else:
             print("intialized")
             self.do_actions()
-
-        
-
-        
 
     
     def get_policy(self):
@@ -113,11 +133,6 @@ class Action:
             new_states = self.action_matrix[state]
             state = np.where(new_states == this_action)[-1]
             
-
-            
-        
-
-        
     
     def publish_action(self, action_num):
         obj = self.actions[action_num]['object']
@@ -126,7 +141,6 @@ class Action:
         action = RobotMoveObjectToTag(robot_object = obj, tag_id = tag)
 
         self.action_publisher.publish(action)
-    
     
     
     #image callback function
@@ -259,11 +273,11 @@ class Action:
         #print(offCenter)
         
         
-        my_twist = Twist(
-            #move forward at constant speed
-            linear = myLinear,
-            angular = myAngular
-        )
+        twist = Twist()
+        #move forward at constant speed
+        twist.linear.x = 0.2,
+        twist.angular.z = myAngular
+        
         # allow the publisher enough time to set up before publishing the first msg
         #rospy.sleep(0.1)
         #print("slept")
@@ -272,9 +286,117 @@ class Action:
         self.robot_movement_pub.publish(my_twist)
 
 
+    # Uses proportional control to drive to the target based on self.scan 
+    def drive_to_target(self):
+        
+        self.set_movement_arm()
+        m = 100
 
+        twist = Twist(
+            linear = Vector3(),
+            angular = Vector3()
+        )
+        
+        cnt = 0
+        print("ready to move")
+        while m > self.min_distance:
+            cnt += 1
+
+            scan = list(self.scan)
+            arr = scan[-10:] + scan[:11]
+            m = min(arr)
+
+            index = arr.index(m)
+
+            #-11 instead of -10 to compensate for listing to the right
+            index -= 9
+
+            if index and not cnt % 20:
+
+                print(m,index)
+
+            angular = (kp * index / 2)
+
+            twist.linear.x = 0.05
+            twist.angular.z = angular
+
+            rospy.sleep(0.1)
+            self.robot_movement_pub.publish(twist)
+        
+        print("done with while")
+
+        twist.linear.x = 0
+        twist.angular.z = 0
+        self.robot_movement_pub.publish(twist)
+        rospy.sleep(1)
+        
+
+
+    def set_arm(self, goal):
+        goal = map(math.radians, goal)
+        self.move_group_arm.go(goal, wait=True)
+        self.move_group_arm.stop()
+
+        rospy.sleep(2)
+
+    def set_gripper(self, goal):
+        self.move_group_gripper.go(goal, wait=True)
+        self.move_group_gripper.stop()
+
+        rospy.sleep(2)
+        
+    def reset(self):
+        goal = [0,0,0,0]
+        goal = map(math.radians, goal)
+        self.move_group_arm.go(goal, wait=True)
+        self.move_group_arm.stop()
+
+        gripper_joint_goal = [0.0, 0.0]
+        self.move_group_gripper.go(gripper_joint_goal, wait=True)
+        self.move_group_gripper.stop()
+        rospy.sleep(2)
+        print("reset")
+
+    def set_movement_arm(self):
+        gripper_joint_goal = [0.018, 0.018]
+        self.set_gripper(gripper_joint_goal)
+
+        goal = [0,5,0,0]
+        self.set_arm(goal)
+        print("arm in position")
+        rospy.sleep(2)
+
+
+    # [1,55,-30,-23] are angles in degrees
+    # Gripper can go to 0
+    def i_lift_things_up(self):
+        print("lifting")
+
+        gripper_joint_goal = [-0.007, -0.007]
+        self.set_gripper(gripper_joint_goal)
+        goal = [0,-50,0,0]
+        self.set_arm(goal)
+        rospy.sleep(2)
+        print("lifted")
+        return True
+    
+    def and_put_them_down(self):
+        print("putting")
+        goal = [0,0,0,0]
+        self.set_arm(goal)
+        print("arm put")
+        gripper_joint_goal = [0.01, 0.01]
+        self.set_gripper(gripper_joint_goal)
+        print("put")
+        return True
 
     def do_actions(self):
+
+        # self.drive_to_target()
+        # self.i_lift_things_up()
+        # self.and_put_them_down()
+        # return
+
         #loop through the policy
         for action_num in self.policy:
 
@@ -289,14 +411,22 @@ class Action:
                 self.find_and_face_color()
             print("ready for next step")
             rospy.sleep(1)
-            #TODO: go to and pickup dumbell
+
+            #Goes to and picks up dumbbell
+            self.drive_to_target()
+            self.i_lift_things_up()
+
             print(self.ar)
             self.inFront = False
             while(not self.inFront):
                 self.find_and_face_ar()
             print("ready for next step")
             rospy.sleep(1)
-            #TODO: go to tag and put down dumbell
+
+            # Goes to AR and drops dumbbell
+            self.drive_to_target()
+            self.and_put_them_down()
+
             
 
 
