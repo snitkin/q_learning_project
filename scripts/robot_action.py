@@ -107,7 +107,7 @@ class Action:
         print("ready")
 
         self.min_distance = 0.22
-        self.min_drop_distance = 0.32
+        self.min_drop_distance = 0.4
 
         while not self.image_init:
             print("waiting for init")

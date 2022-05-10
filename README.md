@@ -3,27 +3,6 @@
 
 Sam Nitkin and Matthias Ling
 
-# Commands
-roscore
-
-ssh pi@[robot]
-set_ip 
-bringup
-
-ssh 
-set_ip
-bringup_cam
-
-rosrun image_transport republish compressed in:=raspicam_node/image raw out:=camera/rgb/image_raw
-
-roslaunch turtlebot3_manipulation_bringup turtlebot3_manipulation_bringup.launch
-
-roslaunch turtlebot3_manipulation_moveit_config move_group.launch
-
-rosrun q_learning_project robot_action.py 
-
-
-
 ## Implementation Plan
 
 ### Q-learning algorithm
@@ -125,7 +104,9 @@ The path is determined in get_policy() after the csv is read in. Starting in sta
   
  
  ### Future Work
+
+ We could improve our color estimation - right now we're averaging all the pixels but it could be more precise.  We could be differentiating by shape, which could help because there was a lot of ambient color that affected the robot's readings.  In the future we could also refine our parameters more, making the robot move faster or navigate to directly in front of the AR tags, instead of to the wall.  We also could imcorporate ros messages.
  
  ### Takeaways
   
-  -This project involved working on two distinct steps. One thing that was helpful for this was organizing our code into seperate files and using messages, nodes, and launch files to properly access the different actions we wanted to do. This high level organization, along with intermediate deliverables, made this large task much more manageable. 
+  This project involved working on two distinct steps. One thing that was helpful for this was organizing our code into seperate files and using messages, nodes, and launch files to properly access the different actions we wanted to do. This high level organization, along with intermediate deliverables, made this large task much more manageable. 
