@@ -3,8 +3,9 @@
 
 Sam Nitkin and Matthias Ling
 
-## FINAl PRODUCT:
-Because the file is too large, we shared it here on google drive:
+## FINAL PRODUCT:
+Because the file is too large for a gif, we shared it here on google drive:
+
 https://drive.google.com/file/d/15-Z79cb8ayctUAH5AAwsKXrB_wpJYxxX/view?usp=sharing
 
 
