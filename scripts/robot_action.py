@@ -107,7 +107,7 @@ class Action:
         print("ready")
 
         self.min_distance = 0.22
-        self.min_drop_distance = 0.4
+        self.min_drop_distance = 0.32
 
         while not self.image_init:
             print("waiting for init")
@@ -259,11 +259,14 @@ class Action:
         if(not np.isnan(tag_center)):
             offCenter = tag_center - w/2
             #if facing robot with margin of error
-            if offCenter in range(-2, 2):
+            
+            if -2 <= offCenter <= 2:
+                
                 self.inFrontAR = True
             myAngular = Vector3(0,0, rotFactor * offCenter)
             #myLinear = Vector3(0, 0, 0)
         else:
+            
             myAngular = Vector3(0,0, 0.1)
             #myLinear = Vector3(0,0,0)
             offCenter = 0
@@ -288,9 +291,6 @@ class Action:
 
     # Uses proportional control to drive to the target based on self.scan 
     def drive_to_target(self, code):
-        
-        self.set_movement_arm()
-        m = 100
 
         twist = Twist(
             linear = Vector3(),
@@ -300,6 +300,7 @@ class Action:
         min_dist = 0.5
 
         if code == "tube":
+            self.set_movement_arm()
             print("driving to tube")
             min_dist = self.min_distance
             bound1, bound2 = -10, 11
@@ -307,11 +308,13 @@ class Action:
             min_dist = self.min_drop_distance
             bound1, bound2 = -2, 3
         else:
-            print("drive_to_target_error")
+            print("drive_to_target error: should not happen")
             return
         
         cnt = 0
         print("ready to move")
+
+        m = 100
         while m > min_dist:
             cnt += 1
 
@@ -338,8 +341,6 @@ class Action:
         twist.angular.z = 0
         self.robot_movement_pub.publish(twist)
         rospy.sleep(1)
-        
-
 
     def set_arm(self, goal):
         goal = map(math.radians, goal)
@@ -352,18 +353,15 @@ class Action:
         self.move_group_gripper.stop()
 
         rospy.sleep(2)
-        
-    def reset(self):
-        goal = [0,0,0,0]
-        goal = map(math.radians, goal)
-        self.move_group_arm.go(goal, wait=True)
-        self.move_group_arm.stop()
 
-        gripper_joint_goal = [0.0, 0.0]
-        self.move_group_gripper.go(gripper_joint_goal, wait=True)
-        self.move_group_gripper.stop()
-        rospy.sleep(2)
-        print("reset")
+    def kill_speed(self):
+        twist = Twist(
+            linear = Vector3(),
+            angular = Vector3()
+        )
+        self.robot_movement_pub.publish(twist)
+        return 
+
 
     def set_movement_arm(self):
         gripper_joint_goal = [0.018, 0.018]
@@ -379,10 +377,9 @@ class Action:
     # Gripper can go to 0
     def i_lift_things_up(self):
         print("lifting")
-
         gripper_joint_goal = [-0.007, -0.007]
         self.set_gripper(gripper_joint_goal)
-        goal = [0,-70,0,0]
+        goal = [0,-50,0,0]
         self.set_arm(goal)
         rospy.sleep(2)
         print("lifted")
@@ -392,7 +389,7 @@ class Action:
 
         goal = [0,0,0,0]
         self.set_arm(goal)
-        rospy.sleep(5)
+        rospy.sleep(2)
         self.time_to_drop = True
     
     def and_put_them_down(self):
@@ -423,11 +420,13 @@ class Action:
         rospy.sleep(1)
 
     def do_actions(self):
-        self.throw_it_back()
-        self.drive_to_target("tube")
-        self.i_lift_things_up()
-        self.and_put_them_down()
-        return
+        # self.kill_spee()
+        # return
+        # self.throw_it_back()
+        # self.drive_to_target("tube")
+        # self.i_lift_things_up()
+        # self.and_put_them_down()
+        # return
 
         #loop through the policy
         for action_num in self.policy:
@@ -461,6 +460,7 @@ class Action:
             self.drive_to_target("ar")
             rospy.sleep(2)
             self.and_put_them_down()
+            # self.reset()
             self.throw_it_back()
 
     def run(self):
